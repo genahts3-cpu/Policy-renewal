@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, date, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
 from models.customer import Customer
@@ -9,6 +9,8 @@ from models.renewal import Renewal
 from models.claim import Claim
 from schemas.schemas import RenewalResponse, RenewalCreate
 from services.auth_service import get_current_customer
+from services.rate_limiter import check_rate_limit
+from services.audit_service import write_audit_log
 from agents.renewal_recommendation_agent import renewal_recommendation_agent
 from agents.customer_memory_agent import customer_memory_agent
 from agents.notification_agent import notification_agent
@@ -25,9 +27,11 @@ async def get_my_renewals(current: Customer = Depends(get_current_customer), db:
 @router.post("/recommend/{policy_id}", response_model=RenewalResponse)
 async def get_renewal_recommendation(
     policy_id: int,
+    request: Request,
     current: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db),
 ):
+    check_rate_limit(current.id)
     policy = db.query(Policy).filter(Policy.id == policy_id, Policy.customer_id == current.id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
@@ -46,8 +50,8 @@ async def get_renewal_recommendation(
         customer_context=memory.to_context_string(),
         policy_number=policy.policy_number,
         policy_type=policy.policy_type,
-        current_premium=policy.premium_amount,
-        coverage_amount=policy.coverage_amount,
+        current_premium=policy.premium_amount * 83,
+        coverage_amount=policy.coverage_amount * 83,
         end_date=policy.end_date,
         status=policy.status,
         claims_summary=claims_summary,
@@ -58,16 +62,24 @@ async def get_renewal_recommendation(
         policy_id=policy.id,
         customer_id=current.id,
         renewal_date=date.today().isoformat(),
-        new_premium=rec.recommended_premium,
+        new_premium=rec.recommended_premium / 83,
         new_end_date=(date.today() + timedelta(days=365)).isoformat(),
-        status="pending",
+        status="pending" if rec.renewal_probability >= 0.60 else "needs_review",
         recommendation_score=rec.renewal_probability,
         recommendation_reason=", ".join(rec.key_reasons),
-        ai_recommendation=rec.personalized_message,
+        ai_recommendation=rec.personalized_message if rec.renewal_probability >= 0.60
+            else "Needs Human Review — confidence below threshold.",
     )
     db.add(renewal)
     db.commit()
     db.refresh(renewal)
+
+    write_audit_log(
+        db=db, user_id=current.id, agent_name="RenewalAgent",
+        action="recommend", question=policy.policy_number,
+        response=f"score={rec.renewal_probability:.2f}", status="success",
+        ip_address=request.client.host if request.client else None,
+    )
     return renewal
 
 
@@ -98,7 +110,7 @@ async def confirm_renewal(
         policy_number=policy.policy_number,
         policy_type=policy.policy_type,
         end_date=renewal.new_end_date,
-        recommended_premium=renewal.new_premium,
+        recommended_premium=renewal.new_premium * 83,
         key_message="Your policy has been successfully renewed!",
         channels=["in_app"],
     )

@@ -162,3 +162,42 @@ class AdminStats(BaseModel):
     pending_renewals: int
     total_claims: int
     renewal_rate: float
+
+
+# Audit Log
+class AuditLogResponse(BaseModel):
+    id: int
+    user_id: Optional[int]
+    agent_name: str
+    action: str
+    question: Optional[str]
+    retrieved_documents: Optional[str]
+    response: Optional[str]
+    status: str
+    ip_address: Optional[str]
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Agent Execution
+class AgentExecutionResponse(BaseModel):
+    id: int
+    user_id: Optional[int]
+    agent_name: str
+    status: str
+    execution_time_ms: Optional[float]
+    session_id: Optional[str]
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Guardrail
+class GuardrailStats(BaseModel):
+    total_checks: int
+    blocked_requests: int
+    safe_requests: int
+    block_rate: float

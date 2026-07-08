@@ -17,7 +17,7 @@ For in_app: 1-2 sentences, friendly tone."""),
     ("human", """Customer: {customer_name}
 Policy: {policy_number} ({policy_type})
 Expiry: {end_date}
-Recommended Premium: ${recommended_premium}
+Recommended Premium: ₹{recommended_premium}
 Key Message: {key_message}
 Channel: {channel}"""),
 ])
@@ -54,7 +54,7 @@ async def generate_notification_message(
     except Exception as e:
         logger.error(f"Notification message generation failed: {e}")
         subject = f"Policy Renewal Reminder - {policy_number}"
-        content = f"Dear {customer_name}, your {policy_type} policy {policy_number} expires on {end_date}. Renew now for ${recommended_premium:.2f}/year."
+        content = f"Dear {customer_name}, your {policy_type} policy {policy_number} expires on {end_date}. Renew now for ₹{recommended_premium:,.0f}/year."
         return subject, content
 
 

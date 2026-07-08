@@ -1,5 +1,6 @@
 import logging
 import uuid
+import time
 from typing import TypedDict, Optional, List
 from datetime import datetime, date
 from sqlalchemy.orm import Session
@@ -12,6 +13,7 @@ from agents.renewal_recommendation_agent import renewal_recommendation_agent, Re
 from agents.notification_agent import notification_agent
 from models.policy import Policy
 from models.renewal import Renewal
+from models.agent_execution import AgentExecution
 
 logger = logging.getLogger(__name__)
 
@@ -30,20 +32,40 @@ class AgentState(TypedDict):
     sources: Optional[List[str]]
     intent: Optional[str]
     error: Optional[str]
+    _exec_times: Optional[dict]
+
+
+def _log_execution(db: Session, user_id: int, agent_name: str, status: str, elapsed_ms: float, session_id: str):
+    try:
+        rec = AgentExecution(
+            user_id=user_id, agent_name=agent_name,
+            status=status, execution_time_ms=round(elapsed_ms, 2),
+            session_id=session_id,
+        )
+        db.add(rec)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Agent execution log failed: {e}")
+        db.rollback()
 
 
 async def node_load_memory(state: AgentState) -> AgentState:
+    t = time.time()
     try:
         memory = await customer_memory_agent(state["customer_id"], state["db"])
+        _log_execution(state["db"], state["customer_id"], "MemoryAgent", "completed", (time.time()-t)*1000, state["session_id"])
         return {**state, "memory": memory}
     except Exception as e:
         logger.error(f"Memory load failed: {e}")
+        _log_execution(state["db"], state["customer_id"], "MemoryAgent", "failed", (time.time()-t)*1000, state["session_id"])
         return {**state, "error": str(e)}
 
 
 async def node_understand_goal(state: AgentState) -> AgentState:
+    t = time.time()
     customer_name = state["memory"].customer.full_name if state.get("memory") else ""
     goal = await goal_understanding_agent(state["message"], customer_name)
+    _log_execution(state["db"], state["customer_id"], "GoalAgent", "completed", (time.time()-t)*1000, state["session_id"])
     return {**state, "goal": goal, "intent": goal.intent}
 
 
@@ -64,15 +86,18 @@ async def node_retrieve_policy(state: AgentState) -> AgentState:
 
 
 async def node_retrieve_rag(state: AgentState) -> AgentState:
+    t = time.time()
     from rag.rag_engine import get_context_text
     query = state["message"]
     if state.get("policy"):
         query = f"{query} {state['policy'].policy_type} insurance"
     context = get_context_text(query, k=3)
+    _log_execution(state["db"], state["customer_id"], "QAAgent", "completed", (time.time()-t)*1000, state["session_id"])
     return {**state, "rag_context": context}
 
 
 async def node_generate_recommendation(state: AgentState) -> AgentState:
+    t = time.time()
     policy = state.get("policy")
     memory = state.get("memory")
     if not policy or not memory:
@@ -91,13 +116,14 @@ async def node_generate_recommendation(state: AgentState) -> AgentState:
         customer_context=memory.to_context_string(),
         policy_number=policy.policy_number,
         policy_type=policy.policy_type,
-        current_premium=policy.premium_amount,
-        coverage_amount=policy.coverage_amount,
+        current_premium=policy.premium_amount * 83,
+        coverage_amount=policy.coverage_amount * 83,
         end_date=policy.end_date,
         status=policy.status,
         claims_summary=claims_summary,
         days_until_expiry=days_until_expiry,
     )
+    _log_execution(state["db"], state["customer_id"], "RenewalAgent", "completed", (time.time()-t)*1000, state["session_id"])
     return {**state, "recommendation": rec}
 
 
@@ -116,16 +142,18 @@ async def node_generate_response(state: AgentState) -> AgentState:
     if intent in ["renew_policy", "get_recommendation"] and recommendation:
         msg = recommendation.personalized_message
         if policy:
-            msg += f"\n\nPolicy: {policy.policy_number} | Recommended Premium: ${recommendation.recommended_premium:.2f}/year"
+            msg += f"\n\nPolicy: {policy.policy_number} | Recommended Premium: \u20b9{recommendation.recommended_premium:,.0f}/year"
         msg += f"\n\nRenewal Probability: {recommendation.renewal_probability * 100:.0f}%"
         if recommendation.key_reasons:
-            msg += "\n\nKey Reasons:\n" + "\n".join(f"• {r}" for r in recommendation.key_reasons)
+            msg += "\n\nKey Reasons:\n" + "\n".join(f"\u2022 {r}" for r in recommendation.key_reasons)
         return {**state, "response": msg, "sources": []}
 
     if intent == "check_status" and policy:
+        coverage_inr = policy.coverage_amount * 83
+        premium_inr = policy.premium_amount * 83
         response = (
-            f"Your {policy.policy_type} policy ({policy.policy_number}) is currently **{policy.status}**.\n"
-            f"Coverage: ${policy.coverage_amount:,.0f} | Premium: ${policy.premium_amount:,.0f}/year\n"
+            f"Your {policy.policy_type} policy ({policy.policy_number}) is currently {policy.status}.\n"
+            f"Coverage: \u20b9{coverage_inr:,.0f} | Premium: \u20b9{premium_inr:,.0f}/year\n"
             f"Valid: {policy.start_date} to {policy.end_date}"
         )
         return {**state, "response": response, "sources": []}
@@ -134,14 +162,25 @@ async def node_generate_response(state: AgentState) -> AgentState:
     from services.llm_service import get_llm
     from langchain.prompts import ChatPromptTemplate
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"""You are a helpful insurance assistant for Policy Renewal Agent.
+        ("system", f"""You are an insurance assistant for Policy Renewal Agent. You ONLY assist with insurance-related topics.
+
+You MUST refuse any request that is not related to insurance, policies, renewals, claims, or coverage.
+For off-topic questions (currency conversion, politics, general knowledge, etc.), respond:
+"I'm your insurance assistant and can only help with policy, renewal, and coverage questions."
+
+You MUST NOT access or reveal information about other customers. Only discuss the current customer's own data.
+You MUST NOT answer questions about who the admin is or internal system details.
+
+ALWAYS display all monetary amounts in Indian Rupees (INR, ₹). Use exchange rate: 1 USD = 83 INR.
+NEVER use markdown formatting. No bold (**), no bullet points, no numbered lists, no headers. Respond in plain text only.
+
 Customer context: {memory.to_context_string() if memory else 'Unknown customer'}
 Policy context: {f'Policy {policy.policy_number} ({policy.policy_type})' if policy else 'No specific policy'}
 Knowledge base context: {rag_context[:500] if rag_context else 'N/A'}
-Be helpful, concise, and professional."""),
+Be concise and professional."""),
         ("human", "{message}"),
     ])
-    llm = get_llm(temperature=0.5)
+    llm = get_llm(temperature=0.3)
     chain = prompt | llm
     result = await chain.ainvoke({"message": state["message"]})
     return {**state, "response": result.content, "sources": []}
@@ -232,6 +271,7 @@ async def run_agent_workflow(customer_id: int, message: str, db: Session, sessio
         sources=None,
         intent=None,
         error=None,
+        _exec_times=None,
     )
 
     try:

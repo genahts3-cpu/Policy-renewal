@@ -15,7 +15,7 @@ Base = declarative_base()
 
 
 def init_db():
-    from models import customer, policy, renewal, claim, conversation, notification  # noqa
+    from models import customer, policy, renewal, claim, conversation, notification, audit_log, agent_execution  # noqa
     Base.metadata.create_all(bind=engine)
 
 

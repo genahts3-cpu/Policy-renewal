@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from db.database import init_db
-from routers import auth, customers, policies, renewals, chat, notifications, knowledge, admin
+from routers import auth, customers, policies, renewals, chat, notifications, knowledge, admin, data_management
 from services.seed import seed_database
 
 logging.basicConfig(
@@ -53,6 +53,7 @@ app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(data_management.router, prefix="/api/data", tags=["data-management"])
 
 
 @app.get("/api/health")

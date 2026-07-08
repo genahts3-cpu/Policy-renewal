@@ -29,7 +29,9 @@ class CustomerMemory:
         if self.policies:
             lines.append("\nPolicies:")
             for p in self.policies:
-                lines.append(f"  - {p.policy_number}: {p.policy_type} | ${p.premium_amount}/yr | Status: {p.status} | Expires: {p.end_date}")
+                premium_inr = p.premium_amount * 83
+                coverage_inr = p.coverage_amount * 83
+                lines.append(f"  - {p.policy_number}: {p.policy_type} | ₹{premium_inr:,.0f}/yr | Coverage: ₹{coverage_inr:,.0f} | Status: {p.status} | Expires: {p.end_date}")
         if self.history:
             lines.append(f"\nRecent conversation turns: {len(self.history)}")
         return "\n".join(lines)
