@@ -1,0 +1,1 @@
+{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImV4cCI6MTc4MzUwNTg1M30.gnmYfX0-GAZvZKfn-xGv-KxCYRbdOzjyZgJYQUK1qko","token_type":"bearer","customer_id":1,"is_admin":true,"full_name":"Admin User"}
