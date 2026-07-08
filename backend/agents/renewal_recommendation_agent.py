@@ -30,7 +30,7 @@ Consider:
 Return a JSON object with these exact fields:
 - should_renew: boolean
 - renewal_probability: float between 0 and 1
-- recommended_premium: float (annual premium in USD)
+- recommended_premium: float (annual premium in INR)
 - key_reasons: list of strings (2-4 reasons)
 - personalized_message: string (2-3 sentences, warm and professional)
 - risk_factors: list of strings (1-3 risks if not renewing)
@@ -43,8 +43,8 @@ Respond ONLY with valid JSON."""),
 Policy Details:
 - Policy Number: {policy_number}
 - Type: {policy_type}
-- Current Premium: ${current_premium}/year
-- Coverage: ${coverage_amount}
+- Current Premium: ₹{current_premium}/year
+- Coverage: ₹{coverage_amount}
 - Expires: {end_date}
 - Status: {status}
 
