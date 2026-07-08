@@ -11,6 +11,7 @@ import { ChatPage } from './pages/ChatPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { AdminPage } from './pages/AdminPage'
+import { DataManagementPage } from './pages/DataManagementPage'
 
 export default function App() {
   return (
@@ -39,6 +40,14 @@ export default function App() {
             element={
               <ProtectedRoute adminOnly>
                 <AdminPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="data-management"
+            element={
+              <ProtectedRoute adminOnly>
+                <DataManagementPage />
               </ProtectedRoute>
             }
           />

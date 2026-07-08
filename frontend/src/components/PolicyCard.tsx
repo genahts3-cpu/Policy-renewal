@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Shield, Calendar, DollarSign, ChevronRight } from 'lucide-react'
+import { Shield, Calendar, IndianRupee, ChevronRight } from 'lucide-react'
 import { Card } from './ui/Card'
 import { Badge } from './ui/Badge'
 import { Button } from './ui/Button'
@@ -38,11 +38,11 @@ export function PolicyCard({ policy, onRenew }: PolicyCardProps) {
 
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <DollarSign className="w-4 h-4" />
+          <IndianRupee className="w-4 h-4" />
           <span>Coverage: <strong>{formatCurrency(policy.coverage_amount)}</strong></span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <DollarSign className="w-4 h-4" />
+          <IndianRupee className="w-4 h-4" />
           <span>Premium: <strong>{formatCurrency(policy.premium_amount)}/yr</strong></span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">

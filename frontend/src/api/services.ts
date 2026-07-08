@@ -53,7 +53,37 @@ export const getAdminStats = () => api.get<AdminStats>('/admin/stats').then((r) 
 export const getAdminPolicies = () => api.get<Policy[]>('/admin/policies').then((r) => r.data)
 export const getAdminRenewals = () => api.get<Renewal[]>('/admin/renewals').then((r) => r.data)
 
-// Knowledge
+// Data Management
+export const uploadDocument = (file: File, collection?: string) => {
+  const form = new FormData()
+  form.append('file', file)
+  const url = collection ? `/data/upload/document?collection=${collection}` : '/data/upload/document'
+  return api.post(url, form, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data)
+}
+export const uploadDataset = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post('/data/upload/dataset', form, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data)
+}
+export const getCollections = () => api.get('/data/collections').then((r) => r.data)
+export const getCollectionDocs = (name: string, search?: string) =>
+  api.get(`/data/collections/${name}${search ? `?search=${encodeURIComponent(search)}` : ''}`).then((r) => r.data)
+export const getDocuments = (search?: string, collection?: string) => {
+  const params = new URLSearchParams()
+  if (search) params.append('search', search)
+  if (collection) params.append('collection', collection)
+  return api.get(`/data/documents?${params}`).then((r) => r.data)
+}
+export const deleteDocument = (id: string, collection: string) =>
+  api.delete(`/data/documents/${id}?collection=${collection}`).then((r) => r.data)
+export const getDatabaseStats = () => api.get('/data/database/stats').then((r) => r.data)
+export const reimportDataset = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post('/data/datasets/reimport', form, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data)
+}
+export const getDatasetStatus = () => api.get('/data/datasets/status').then((r) => r.data)
+
 export const uploadPdf = (file: File) => {
   const form = new FormData()
   form.append('file', file)

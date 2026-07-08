@@ -17,6 +17,7 @@ const navItems = [
 
 const adminItems = [
   { to: '/admin', icon: Shield, label: 'Admin Dashboard' },
+  { to: '/data-management', icon: Shield, label: 'Data Management' },
 ]
 
 export function Sidebar() {

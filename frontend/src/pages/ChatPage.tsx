@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Sparkles } from 'lucide-react'
+import { Send, Bot, User, Sparkles, PlusCircle } from 'lucide-react'
 import { sendChat } from '../api/services'
 import { Button } from '../components/ui/Button'
-import { Spinner } from '../components/ui/Spinner'
 import type { ChatMessage } from '../types'
 
 const SUGGESTED = [
@@ -14,22 +13,48 @@ const SUGGESTED = [
   'What are my coverage limits?',
 ]
 
+const INITIAL_MESSAGE: ChatMessage = {
+  role: 'assistant',
+  content: "Hello! I'm your AI insurance assistant. I can help you understand your policies, answer questions, and provide renewal recommendations. How can I help you today?",
+  timestamp: new Date().toISOString(),
+}
+
+const getChatKey = (suffix: string) => {
+  const uid = localStorage.getItem('customer_id') ?? 'guest'
+  return `chat_${uid}_${suffix}`
+}
+
 export function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content: "Hello! I'm your AI insurance assistant. I can help you understand your policies, answer questions, and provide renewal recommendations. How can I help you today?",
-      timestamp: new Date().toISOString(),
-    },
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const saved = sessionStorage.getItem(getChatKey('messages'))
+    return saved ? JSON.parse(saved) : [INITIAL_MESSAGE]
+  })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sessionId, setSessionId] = useState<string | undefined>()
+  const [sessionId, setSessionId] = useState<string | undefined>(
+    () => sessionStorage.getItem(getChatKey('session_id')) || undefined
+  )
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    sessionStorage.setItem(getChatKey('messages'), JSON.stringify(messages))
+  }, [messages])
+
+  useEffect(() => {
+    if (sessionId) sessionStorage.setItem(getChatKey('session_id'), sessionId)
+  }, [sessionId])
+
+  const newChat = () => {
+    sessionStorage.removeItem(getChatKey('messages'))
+    sessionStorage.removeItem(getChatKey('session_id'))
+    setMessages([{ ...INITIAL_MESSAGE, timestamp: new Date().toISOString() }])
+    setSessionId(undefined)
+    setInput('')
+  }
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return
@@ -69,9 +94,18 @@ export function ChatPage() {
           <h1 className="font-semibold text-gray-900">AI Insurance Assistant</h1>
           <p className="text-xs text-gray-500">Powered by LangGraph + GPT-4o</p>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-xs text-gray-500">Online</span>
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={newChat}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            New Chat
+          </button>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-xs text-gray-500">Online</span>
+          </div>
         </div>
       </div>
 
@@ -95,8 +129,8 @@ export function ChatPage() {
               }`}>
                 {msg.content}
               </div>
-              {msg.intent && msg.intent !== 'general_chat' && (
-                <span className="text-xs text-gray-400 px-1">Intent: {msg.intent.replace('_', ' ')}</span>
+              {msg.intent && msg.intent !== 'general_chat' && msg.intent !== 'off_topic' && msg.intent !== 'blocked' && (
+                <span className="text-xs text-gray-400 px-1">Intent: {msg.intent.replace(/_/g, ' ')}</span>
               )}
               {msg.sources && msg.sources.length > 0 && (
                 <div className="flex flex-wrap gap-1 px-1">

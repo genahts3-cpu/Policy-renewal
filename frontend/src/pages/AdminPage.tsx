@@ -165,8 +165,8 @@ export function AdminPage() {
                       <td className="py-3 px-2 font-medium text-gray-900">{p.policy_number}</td>
                       <td className="py-3 px-2 capitalize">{p.policy_type}</td>
                       <td className="py-3 px-2 text-gray-500">#{p.customer_id}</td>
-                      <td className="py-3 px-2">{formatCurrency(p.premium_amount)}</td>
-                      <td className="py-3 px-2">{formatCurrency(p.coverage_amount)}</td>
+                      <td className="py-3 px-2">{formatCurrency(p.premium_amount * 83)}</td>
+                      <td className="py-3 px-2">{formatCurrency(p.coverage_amount * 83)}</td>
                       <td className="py-3 px-2"><Badge className={statusColor(p.status)}>{p.status}</Badge></td>
                       <td className="py-3 px-2 text-gray-500">{formatDate(p.end_date)}</td>
                     </tr>
@@ -197,7 +197,7 @@ export function AdminPage() {
                       <td className="py-3 px-2 font-medium">#{r.id}</td>
                       <td className="py-3 px-2">#{r.policy_id}</td>
                       <td className="py-3 px-2">#{r.customer_id}</td>
-                      <td className="py-3 px-2">{r.new_premium ? formatCurrency(r.new_premium) : '-'}</td>
+                      <td className="py-3 px-2">{r.new_premium ? formatCurrency(r.new_premium * 83) : '-'}</td>
                       <td className="py-3 px-2">{r.recommendation_score ? `${(r.recommendation_score * 100).toFixed(0)}%` : '-'}</td>
                       <td className="py-3 px-2"><Badge className={statusColor(r.status)}>{r.status}</Badge></td>
                       <td className="py-3 px-2 text-gray-500">{formatDate(r.created_at)}</td>
