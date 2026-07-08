@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Shield, Calendar, DollarSign, User, FileText } from 'lucide-react'
+import { ArrowLeft, Shield, Calendar, IndianRupee, User, FileText } from 'lucide-react'
 import { getPolicy, getPolicyClaims } from '../api/services'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -58,9 +58,9 @@ export function PolicyDetailPage() {
           <CardHeader><CardTitle>Coverage Details</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {[
-              { icon: DollarSign, label: 'Coverage Amount', value: formatCurrency(policy.coverage_amount) },
-              { icon: DollarSign, label: 'Annual Premium', value: formatCurrency(policy.premium_amount) },
-              { icon: DollarSign, label: 'Deductible', value: formatCurrency(policy.deductible) },
+              { icon: IndianRupee, label: 'Coverage Amount', value: formatCurrency(policy.coverage_amount) },
+              { icon: IndianRupee, label: 'Annual Premium', value: formatCurrency(policy.premium_amount) },
+              { icon: IndianRupee, label: 'Deductible', value: formatCurrency(policy.deductible) },
               { icon: User, label: 'Beneficiary', value: policy.beneficiary ?? 'N/A' },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
