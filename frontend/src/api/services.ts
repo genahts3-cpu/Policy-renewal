@@ -91,3 +91,27 @@ export const uploadPdf = (file: File) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then((r) => r.data)
 }
+
+// Support & Meetings
+export const requestSupport = (message: string) =>
+  api.post('/support/request', { message }).then((r) => r.data)
+
+export const getSuggestions = (message: string) =>
+  api.post('/support/suggestions', { message }).then((r) => r.data)
+
+export const bookMeeting = (data: {
+  support_user_id: number
+  selected_slot: { start: string; end: string; display?: string }
+  subject: string
+  description?: string
+}) => api.post('/support/book', data).then((r) => r.data)
+
+export const getMyMeetings = () => api.get('/support/customer/me').then((r) => r.data)
+export const getUpcomingMeetings = () => api.get('/support/upcoming').then((r) => r.data)
+export const getMeetingHistory = () => api.get('/support/history').then((r) => r.data)
+export const cancelMeeting = (id: number) => api.delete(`/support/${id}`).then((r) => r.data)
+export const rescheduleMeeting = (id: number, new_slot: { start: string; end: string; display?: string }) =>
+  api.put(`/support/reschedule/${id}`, { new_slot }).then((r) => r.data)
+export const getAdminMeetings = () => api.get('/support/admin/all').then((r) => r.data)
+export const getSupportUsers = () => api.get('/support/support-users').then((r) => r.data)
+

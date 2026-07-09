@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore'
 import { cn } from '../lib/utils'
 import {
   LayoutDashboard, FileText, RefreshCw, MessageSquare, Bell,
-  User, Shield, LogOut, ChevronRight
+  User, Shield, LogOut, HeadphonesIcon, Calendar
 } from 'lucide-react'
 
 const navItems = [
@@ -11,6 +11,8 @@ const navItems = [
   { to: '/policies', icon: FileText, label: 'My Policies' },
   { to: '/renewals', icon: RefreshCw, label: 'Renewals' },
   { to: '/chat', icon: MessageSquare, label: 'AI Assistant' },
+  { to: '/support', icon: HeadphonesIcon, label: 'Talk to Human' },
+  { to: '/meetings', icon: Calendar, label: 'My Meetings' },
   { to: '/notifications', icon: Bell, label: 'Notifications' },
   { to: '/profile', icon: User, label: 'Profile' },
 ]
@@ -18,6 +20,7 @@ const navItems = [
 const adminItems = [
   { to: '/admin', icon: Shield, label: 'Admin Dashboard' },
   { to: '/data-management', icon: Shield, label: 'Data Management' },
+  { to: '/admin/meetings', icon: Calendar, label: 'All Meetings' },
 ]
 
 export function Sidebar() {

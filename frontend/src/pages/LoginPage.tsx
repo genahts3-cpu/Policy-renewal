@@ -31,9 +31,7 @@ export function LoginPage() {
     }
   }
 
-  const fillDemo = (e: string, p: string) => { setEmail(e); setPassword(p) }
-
-  return (
+return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
@@ -92,46 +90,18 @@ export function LoginPage() {
             </Button>
           </form>
 
-          {/* Demo accounts */}
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 mb-3 text-center">DEMO ACCOUNTS</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => fillDemo('john.smith@email.com', 'password123')}
-                className="text-xs px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-left"
-              >
-                <div className="font-medium">John Smith</div>
-                <div className="text-blue-500">Customer</div>
-              </button>
-              <button
-                onClick={() => fillDemo('admin@insurance.com', 'admin123')}
-                className="text-xs px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-left"
-              >
-                <div className="font-medium">Admin User</div>
-                <div className="text-purple-500">Administrator</div>
-              </button>
-              <button
-                onClick={() => fillDemo('sarah.johnson@email.com', 'password123')}
-                className="text-xs px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-left"
-              >
-                <div className="font-medium">Sarah Johnson</div>
-                <div className="text-green-500">Customer</div>
-              </button>
-              <button
-                onClick={() => fillDemo('mike.davis@email.com', 'password123')}
-                className="text-xs px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-left"
-              >
-                <div className="font-medium">Mike Davis</div>
-                <div className="text-orange-500">Customer</div>
-              </button>
-            </div>
-          </div>
+
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
           Don't have an account?{' '}
           <Link to="/register" className="text-blue-600 hover:underline font-medium">
             Register
+          </Link>
+        </p>
+        <p className="text-center text-sm text-gray-500 mt-2">
+          <Link to="/reset-password" className="text-blue-600 hover:underline font-medium">
+            Forgot password?
           </Link>
         </p>
       </div>

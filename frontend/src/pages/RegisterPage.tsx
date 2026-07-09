@@ -22,7 +22,7 @@ export function RegisterPage() {
     try {
       await register({ ...form, age: form.age ? parseInt(form.age) : undefined })
       const token = await login(form.email, form.password)
-      const customer = await getMe()
+      const customer = await getMe(token.access_token)
       setAuth(token.access_token, customer, token.is_admin)
       navigate('/dashboard')
     } catch (err: any) {

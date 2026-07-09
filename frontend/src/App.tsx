@@ -12,6 +12,10 @@ import { NotificationsPage } from './pages/NotificationsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { AdminPage } from './pages/AdminPage'
 import { DataManagementPage } from './pages/DataManagementPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { SupportPage } from './pages/SupportPage'
+import { MeetingsPage } from './pages/MeetingsPage'
+import { AdminMeetingsPage } from './pages/AdminMeetingsPage'
 
 export default function App() {
   return (
@@ -19,6 +23,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/"
           element={
@@ -33,6 +38,8 @@ export default function App() {
           <Route path="policies/:id" element={<PolicyDetailPage />} />
           <Route path="renewals" element={<RenewalsPage />} />
           <Route path="chat" element={<ChatPage />} />
+          <Route path="support" element={<SupportPage />} />
+          <Route path="meetings" element={<MeetingsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route
@@ -48,6 +55,14 @@ export default function App() {
             element={
               <ProtectedRoute adminOnly>
                 <DataManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/meetings"
+            element={
+              <ProtectedRoute adminOnly>
+                <AdminMeetingsPage />
               </ProtectedRoute>
             }
           />

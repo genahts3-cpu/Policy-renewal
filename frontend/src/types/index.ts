@@ -83,6 +83,45 @@ export interface ChatMessage {
   intent?: string
   sources?: string[]
   timestamp: string
+  needs_support?: boolean
+  support_slots?: SlotItem[]
+  support_user_id?: number
+  support_user_name?: string
+}
+
+export interface SlotItem {
+  start: string
+  end: string
+  display?: string
+}
+
+export interface Meeting {
+  id: number
+  customer_id: number
+  support_user_id: number
+  subject: string
+  description?: string
+  meeting_type: string
+  meeting_link?: string
+  google_event_id?: string
+  scheduled_start: string
+  scheduled_end: string
+  duration_minutes: number
+  status: string
+  created_at: string
+  updated_at: string
+  support_user_name?: string
+  customer_name?: string
+}
+
+export interface SupportUser {
+  id: number
+  name: string
+  email: string
+  department: string
+  calendar_email?: string
+  status: string
+  created_at: string
 }
 
 export interface AdminStats {

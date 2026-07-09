@@ -47,7 +47,7 @@ function StatBox({ label, value }: { label: string; value: number | string }) {
 
 // ── Document Upload ───────────────────────────────────────────────────────
 
-function DocumentUploadCard() {
+function DocumentUploadCard({ onUploaded }: { onUploaded: () => void }) {
   const [file, setFile] = useState<File | null>(null)
   const [collection, setCollection] = useState(COLLECTIONS[0])
   const [loading, setLoading] = useState(false)
@@ -65,6 +65,7 @@ function DocumentUploadCard() {
       setResult(res)
       setFile(null)
       if (inputRef.current) inputRef.current.value = ''
+      onUploaded()
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? 'Upload failed.')
     } finally {
@@ -279,6 +280,11 @@ function CollectionsTable({ collections, onRefresh }: { collections: Collection[
     }
   }
 
+  const handleRefreshAndReload = () => {
+    onRefresh()
+    if (selectedCol) loadDocs(selectedCol, search || undefined)
+  }
+
   const handleSearch = () => {
     loadDocs(selectedCol ?? undefined, search || undefined)
   }
@@ -296,7 +302,7 @@ function CollectionsTable({ collections, onRefresh }: { collections: Collection[
     try {
       await deleteDocument(doc.id, doc.collection)
       setDocs((prev) => prev.filter((d) => d.id !== doc.id))
-      onRefresh()
+      handleRefreshAndReload()
     } catch {
       // silent
     } finally {
@@ -309,7 +315,7 @@ function CollectionsTable({ collections, onRefresh }: { collections: Collection[
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Collections</CardTitle>
-          <Button variant="outline" size="sm" onClick={onRefresh}>Refresh</Button>
+          <Button variant="outline" size="sm" onClick={handleRefreshAndReload}>Refresh</Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -487,7 +493,7 @@ export function DataManagementPage() {
 
       {tab === 'upload' && (
         <div className="grid lg:grid-cols-2 gap-6">
-          <DocumentUploadCard />
+          <DocumentUploadCard onUploaded={handleRefresh} />
           <DatasetUploadCard onImported={handleRefresh} />
         </div>
       )}
