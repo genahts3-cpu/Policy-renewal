@@ -11,6 +11,8 @@ from agents.customer_memory_agent import customer_memory_agent, CustomerMemory, 
 from agents.policy_knowledge_agent import policy_knowledge_agent
 from agents.renewal_recommendation_agent import renewal_recommendation_agent, RenewalRecommendation
 from agents.notification_agent import notification_agent
+from agents.support_detection_agent import support_detection_agent
+from agents.availability_agent import availability_agent
 from models.policy import Policy
 from models.renewal import Renewal
 from models.agent_execution import AgentExecution
@@ -33,6 +35,10 @@ class AgentState(TypedDict):
     intent: Optional[str]
     error: Optional[str]
     _exec_times: Optional[dict]
+    needs_support: Optional[bool]
+    support_slots: Optional[List]
+    support_user_id: Optional[int]
+    support_user_name: Optional[str]
 
 
 def _log_execution(db: Session, user_id: int, agent_name: str, status: str, elapsed_ms: float, session_id: str):
@@ -54,11 +60,11 @@ async def node_load_memory(state: AgentState) -> AgentState:
     try:
         memory = await customer_memory_agent(state["customer_id"], state["db"])
         _log_execution(state["db"], state["customer_id"], "MemoryAgent", "completed", (time.time()-t)*1000, state["session_id"])
-        return {**state, "memory": memory}
+        return {**state, "memory": memory, "needs_support": False, "support_slots": [], "support_user_id": None, "support_user_name": None}
     except Exception as e:
         logger.error(f"Memory load failed: {e}")
         _log_execution(state["db"], state["customer_id"], "MemoryAgent", "failed", (time.time()-t)*1000, state["session_id"])
-        return {**state, "error": str(e)}
+        return {**state, "error": str(e), "needs_support": False, "support_slots": [], "support_user_id": None, "support_user_name": None}
 
 
 async def node_understand_goal(state: AgentState) -> AgentState:
@@ -66,7 +72,47 @@ async def node_understand_goal(state: AgentState) -> AgentState:
     customer_name = state["memory"].customer.full_name if state.get("memory") else ""
     goal = await goal_understanding_agent(state["message"], customer_name)
     _log_execution(state["db"], state["customer_id"], "GoalAgent", "completed", (time.time()-t)*1000, state["session_id"])
-    return {**state, "goal": goal, "intent": goal.intent}
+
+    # Check if support is needed
+    detection = await support_detection_agent(state["message"])
+    return {**state, "goal": goal, "intent": goal.intent, "needs_support": detection["needs_support"]}
+
+
+async def node_handle_support(state: AgentState) -> AgentState:
+    """Fetch available slots and build support response."""
+    t = time.time()
+    try:
+        memory = state.get("memory")
+        customer_email = memory.customer.email if memory else ""
+        availability = await availability_agent(customer_email=customer_email, db=state["db"])
+        slots = availability["recommended_slots"]
+        support_name = availability["support_user_name"]
+        support_id = availability["support_user_id"]
+
+        if slots:
+            slot_lines = "\n".join(
+                f"  Option {i+1}: {s.get('display', s['start'])}"
+                for i, s in enumerate(slots)
+            )
+            response = (
+                f"I can connect you with our support team. Here are the available slots:\n\n"
+                f"{slot_lines}\n\n"
+                f"Representative: {support_name}\n"
+                f"Please select a slot and I will schedule the meeting for you."
+            )
+        else:
+            response = (
+                "I can connect you with our support team. "
+                "Please contact us at support@insurance.com to schedule a meeting."
+            )
+
+        _log_execution(state["db"], state["customer_id"], "AvailabilityAgent", "completed", (time.time()-t)*1000, state["session_id"])
+        return {**state, "response": response, "sources": [], "intent": "request_support",
+                "support_slots": slots, "support_user_id": support_id, "support_user_name": support_name}
+    except Exception as e:
+        logger.error(f"Support handler failed: {e}")
+        return {**state, "response": "I can connect you with our support team. Please use the Support section to schedule a meeting.",
+                "sources": [], "intent": "request_support"}
 
 
 async def node_retrieve_policy(state: AgentState) -> AgentState:
@@ -88,10 +134,21 @@ async def node_retrieve_policy(state: AgentState) -> AgentState:
 async def node_retrieve_rag(state: AgentState) -> AgentState:
     t = time.time()
     from rag.rag_engine import get_context_text
+    from services.chroma_service import get_all_documents
     query = state["message"]
     if state.get("policy"):
         query = f"{query} {state['policy'].policy_type} insurance"
-    context = get_context_text(query, k=3)
+
+    # Search RAG vectorstore
+    rag_context = get_context_text(query, k=3)
+
+    # Also search uploaded document collections
+    uploaded_docs = get_all_documents(search=query)
+    uploaded_context = "\n\n---\n\n".join(
+        d["content"] for d in uploaded_docs[:5] if d.get("content")
+    ) if uploaded_docs else ""
+
+    context = "\n\n---\n\n".join(filter(None, [rag_context, uploaded_context]))
     _log_execution(state["db"], state["customer_id"], "QAAgent", "completed", (time.time()-t)*1000, state["session_id"])
     return {**state, "rag_context": context}
 
@@ -209,6 +266,12 @@ async def node_save_conversation(state: AgentState) -> AgentState:
     return state
 
 
+def should_handle_support(state: AgentState) -> str:
+    if state.get("needs_support"):
+        return "support"
+    return "continue"
+
+
 def should_get_recommendation(state: AgentState) -> str:
     intent = state.get("intent", "general_chat")
     if intent in ["renew_policy", "get_recommendation"] and state.get("policy"):
@@ -221,6 +284,7 @@ def build_workflow() -> StateGraph:
 
     workflow.add_node("load_memory", node_load_memory)
     workflow.add_node("understand_goal", node_understand_goal)
+    workflow.add_node("handle_support", node_handle_support)
     workflow.add_node("retrieve_policy", node_retrieve_policy)
     workflow.add_node("retrieve_rag", node_retrieve_rag)
     workflow.add_node("generate_recommendation", node_generate_recommendation)
@@ -229,7 +293,11 @@ def build_workflow() -> StateGraph:
 
     workflow.set_entry_point("load_memory")
     workflow.add_edge("load_memory", "understand_goal")
-    workflow.add_edge("understand_goal", "retrieve_policy")
+    workflow.add_conditional_edges("understand_goal", should_handle_support, {
+        "support": "handle_support",
+        "continue": "retrieve_policy",
+    })
+    workflow.add_edge("handle_support", "save_conversation")
     workflow.add_edge("retrieve_policy", "retrieve_rag")
     workflow.add_conditional_edges("retrieve_rag", should_get_recommendation, {
         "recommend": "generate_recommendation",
@@ -272,6 +340,10 @@ async def run_agent_workflow(customer_id: int, message: str, db: Session, sessio
         intent=None,
         error=None,
         _exec_times=None,
+        needs_support=False,
+        support_slots=[],
+        support_user_id=None,
+        support_user_name=None,
     )
 
     try:
@@ -281,6 +353,10 @@ async def run_agent_workflow(customer_id: int, message: str, db: Session, sessio
             "intent": final_state.get("intent", "general_chat"),
             "session_id": session_id,
             "sources": final_state.get("sources", []),
+            "needs_support": final_state.get("needs_support", False),
+            "support_slots": final_state.get("support_slots", []),
+            "support_user_id": final_state.get("support_user_id"),
+            "support_user_name": final_state.get("support_user_name"),
         }
     except Exception as e:
         logger.error(f"Workflow failed: {e}")
