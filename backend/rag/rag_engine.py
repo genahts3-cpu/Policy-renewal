@@ -1,5 +1,6 @@
 import logging
 import os
+import ssl
 import httpx
 from typing import List, Optional
 from langchain_community.document_loaders import PyPDFLoader
@@ -8,6 +9,12 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain.schema import Document
 from config import get_settings
+
+# Disable SSL verification globally for tiktoken and urllib downloads
+os.environ.setdefault("PYTHONHTTPSVERIFY", "0")
+os.environ.setdefault("CURL_CA_BUNDLE", "")
+os.environ.setdefault("REQUESTS_CA_BUNDLE", "")
+ssl._create_default_https_context = ssl._create_unverified_context
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

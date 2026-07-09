@@ -1,13 +1,20 @@
 import logging
 import os
+import ssl
 from contextlib import asynccontextmanager
+
+# Disable SSL verification for corporate proxy (tiktoken, urllib downloads)
+os.environ.setdefault("PYTHONHTTPSVERIFY", "0")
+os.environ.setdefault("CURL_CA_BUNDLE", "")
+os.environ.setdefault("REQUESTS_CA_BUNDLE", "")
+ssl._create_default_https_context = ssl._create_unverified_context
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from db.database import init_db
-from routers import auth, customers, policies, renewals, chat, notifications, knowledge, admin, data_management
+from routers import auth, customers, policies, renewals, chat, notifications, knowledge, admin, data_management, support
 from services.seed import seed_database
 
 logging.basicConfig(
@@ -54,6 +61,7 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["not
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(data_management.router, prefix="/api/data", tags=["data-management"])
+app.include_router(support.router, prefix="/api/support", tags=["support"])
 
 
 @app.get("/api/health")

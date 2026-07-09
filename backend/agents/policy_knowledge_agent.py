@@ -4,6 +4,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema import Document
 from services.llm_service import get_llm
 from rag.rag_engine import retrieve_context
+from services.chroma_service import get_all_documents
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,20 @@ Customer Profile:
 
 
 async def policy_knowledge_agent(question: str, customer_context: str = "") -> tuple[str, List[str]]:
+    # Search RAG vectorstore (policy_knowledge collection)
     docs: List[Document] = retrieve_context(question, k=4)
-    context = "\n\n---\n\n".join(d.page_content for d in docs) if docs else "No specific policy documents available in the knowledge base."
+    rag_context = "\n\n---\n\n".join(d.page_content for d in docs) if docs else ""
     sources = list({d.metadata.get("source", "Policy Document") for d in docs})
+
+    # Also search uploaded documents from chroma_service collections
+    uploaded_docs = get_all_documents(search=question)
+    uploaded_context = "\n\n---\n\n".join(
+        d["content"] for d in uploaded_docs[:6] if d.get("content")
+    ) if uploaded_docs else ""
+
+    context = "\n\n---\n\n".join(filter(None, [rag_context, uploaded_context])) or "No specific policy documents available in the knowledge base."
+    if uploaded_docs:
+        sources += list({d["source_file"] for d in uploaded_docs[:6] if d.get("source_file")})
 
     try:
         llm = get_llm(temperature=0.2)
