@@ -1,10 +1,17 @@
 import logging
 import os
+import ssl
 import uuid
 from datetime import datetime
 from typing import List, Optional
 import chromadb
 from config import get_settings
+
+# Disable SSL verification for corporate proxy
+ssl._create_default_https_context = ssl._create_unverified_context
+os.environ.setdefault("PYTHONHTTPSVERIFY", "0")
+os.environ.setdefault("REQUESTS_CA_BUNDLE", "")
+os.environ.setdefault("CURL_CA_BUNDLE", "")
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -48,8 +55,12 @@ def get_collection_documents(collection_name: str, search: Optional[str] = None)
     client = _get_client()
     col = client.get_or_create_collection(collection_name)
     try:
-        if search:
-            results = col.query(query_texts=[search], n_results=min(20, max(col.count(), 1)))
+        if search and col.count() > 0:
+            # Use our own embedder to avoid ChromaDB making its own SSL-failing HTTP call
+            from rag.rag_engine import get_embeddings
+            embedder = get_embeddings()
+            query_embedding = embedder.embed_query(search)
+            results = col.query(query_embeddings=[query_embedding], n_results=min(6, col.count()))
             ids = results.get("ids", [[]])[0]
             metadatas = results.get("metadatas", [[]])[0]
             documents = results.get("documents", [[]])[0]
@@ -67,6 +78,7 @@ def get_collection_documents(collection_name: str, search: Optional[str] = None)
                 "page": (metadatas[i] or {}).get("page", ""),
                 "chunk": (metadatas[i] or {}).get("chunk_number", i),
                 "created_at": (metadatas[i] or {}).get("created_at", ""),
+                "content": documents[i] or "",
                 "preview": (documents[i] or "")[:120],
             }
             for i in range(len(ids))
@@ -78,10 +90,45 @@ def get_collection_documents(collection_name: str, search: Optional[str] = None)
 
 def get_all_documents(search: Optional[str] = None, collection: Optional[str] = None) -> List[dict]:
     targets = [collection] if collection and collection in COLLECTIONS else COLLECTIONS
-    docs = []
-    for col_name in targets:
-        docs.extend(get_collection_documents(col_name, search))
-    return docs
+    if not search:
+        docs = []
+        for col_name in targets:
+            docs.extend(get_collection_documents(col_name))
+        return docs
+
+    # For search queries, use embeddings for proper similarity search across all collections
+    try:
+        from rag.rag_engine import get_embeddings
+        embedder = get_embeddings()
+        query_embedding = embedder.embed_query(search)
+        client = _get_client()
+        all_results = []
+        for col_name in targets:
+            col = client.get_or_create_collection(col_name)
+            if col.count() == 0:
+                continue
+            results = col.query(query_embeddings=[query_embedding], n_results=min(3, col.count()), include=["documents", "metadatas", "distances"])
+            ids = results.get("ids", [[]])[0]
+            metadatas = results.get("metadatas", [[]])[0]
+            documents = results.get("documents", [[]])[0]
+            distances = results.get("distances", [[]])[0]
+            for i in range(len(ids)):
+                all_results.append({
+                    "id": ids[i],
+                    "collection": col_name,
+                    "source_file": (metadatas[i] or {}).get("source", ""),
+                    "chunk": (metadatas[i] or {}).get("chunk_number", i),
+                    "created_at": (metadatas[i] or {}).get("created_at", ""),
+                    "content": documents[i] or "",
+                    "preview": (documents[i] or "")[:120],
+                    "distance": distances[i] if distances else 1.0,
+                })
+        # Sort by similarity (lower distance = more relevant) and return top 6
+        all_results.sort(key=lambda x: x.get("distance", 1.0))
+        return all_results[:6]
+    except Exception as e:
+        logger.error(f"get_all_documents search failed: {e}")
+        return []
 
 
 def add_document_chunks(

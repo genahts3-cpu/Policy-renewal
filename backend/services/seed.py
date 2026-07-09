@@ -5,6 +5,7 @@ from models.customer import Customer
 from models.policy import Policy
 from models.claim import Claim
 from models.notification import Notification
+from models.support_user import SupportUser
 from services.auth_service import hash_password
 
 logger = logging.getLogger(__name__)
@@ -138,11 +139,31 @@ CLAIMS_TEMPLATE = [
 ]
 
 
+async def _seed_support_users(db):
+    try:
+        if db.query(SupportUser).count() > 0:
+            return
+        support_team = [
+            {"name": "Priya Sharma", "email": "priya.sharma@insurance.com", "department": "Policy Support", "calendar_email": "priya.sharma@insurance.com"},
+            {"name": "Rahul Mehta", "email": "rahul.mehta@insurance.com", "department": "Claims Support", "calendar_email": "rahul.mehta@insurance.com"},
+            {"name": "Anita Desai", "email": "anita.desai@insurance.com", "department": "Renewal Support", "calendar_email": "anita.desai@insurance.com"},
+        ]
+        for s in support_team:
+            db.add(SupportUser(**s, status="available"))
+        db.commit()
+        logger.info("Support users seeded.")
+    except Exception as e:
+        logger.warning(f"Support user seeding failed: {e}")
+        db.rollback()
+
+
 async def seed_database():
     db = SessionLocal()
     try:
         if db.query(Customer).count() > 0:
             logger.info("Database already seeded, skipping.")
+            # Still seed support users if missing
+            await _seed_support_users(db)
             return
 
         logger.info("Seeding database with sample data...")
@@ -212,6 +233,7 @@ async def seed_database():
 
         db.commit()
         logger.info("Database seeded successfully.")
+        await _seed_support_users(db)
     except Exception as e:
         logger.error(f"Seeding failed: {e}")
         db.rollback()
