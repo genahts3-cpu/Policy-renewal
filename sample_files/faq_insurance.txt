@@ -1,0 +1,22 @@
+INSURANCE POLICY FAQ
+
+Q: What is a deductible?
+A: A deductible is the amount you pay out-of-pocket before your insurance coverage kicks in. For example, if your deductible is $500 and your claim is $2000, you pay $500 and insurance covers $1500.
+
+Q: How do I file a claim?
+A: To file a claim, log in to your account, navigate to the Claims section, and click "File New Claim". Provide details about the incident, upload supporting documents, and submit. Our team will review within 3-5 business days.
+
+Q: What is the renewal process?
+A: Policies are automatically flagged for renewal 60 days before expiration. You will receive a notification with a renewal recommendation. You can confirm or decline the renewal from your dashboard.
+
+Q: Can I change my coverage amount?
+A: Yes, coverage changes can be requested during the renewal period or by contacting your agent. Changes take effect at the start of the next policy term.
+
+Q: What is not covered under a standard health policy?
+A: Standard exclusions include pre-existing conditions (within the first 12 months), cosmetic procedures, experimental treatments, and injuries from illegal activities.
+
+Q: How long does claim processing take?
+A: Simple claims are processed within 5-7 business days. Complex claims may take up to 30 days. You will receive status updates via email and in-app notifications.
+
+Q: What happens if I miss a premium payment?
+A: A grace period of 30 days is provided. If payment is not received within the grace period, the policy will be suspended. Reinstatement requires payment of overdue premiums plus a reinstatement fee.
