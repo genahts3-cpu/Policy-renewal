@@ -190,11 +190,20 @@ async def node_generate_response(state: AgentState) -> AgentState:
     policy = state.get("policy")
     recommendation = state.get("recommendation")
     rag_context = state.get("rag_context", "")
+    message = state["message"]
 
-    if intent == "ask_question":
+    # Build conversation history string for context
+    history_str = ""
+    if memory and memory.history:
+        recent = memory.history[-6:]  # last 3 turns
+        history_str = "\n".join(f"{h['role'].capitalize()}: {h['content']}" for h in recent)
+
+    if intent == "ask_question" or (not rag_context == "" and intent == "general_chat"):
         customer_ctx = memory.to_context_string() if memory else ""
-        answer, sources = await policy_knowledge_agent(state["message"], customer_ctx)
-        return {**state, "response": answer, "sources": sources}
+        answer, sources = await policy_knowledge_agent(message, customer_ctx)
+        # If RAG found nothing, fall through to general chat
+        if "could not find" not in answer.lower():
+            return {**state, "response": answer, "sources": sources}
 
     if intent in ["renew_policy", "get_recommendation"] and recommendation:
         msg = recommendation.personalized_message
@@ -215,31 +224,35 @@ async def node_generate_response(state: AgentState) -> AgentState:
         )
         return {**state, "response": response, "sources": []}
 
-    # General chat fallback
+    # General chat fallback with full history + RAG context
     from services.llm_service import get_llm
     from langchain.prompts import ChatPromptTemplate
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"""You are an insurance assistant for Policy Renewal Agent. You ONLY assist with insurance-related topics.
+        ("system", f"""You are a helpful insurance assistant for Policy Renewal Agent.
 
-You MUST refuse any request that is not related to insurance, policies, renewals, claims, or coverage.
-For off-topic questions (currency conversion, politics, general knowledge, etc.), respond:
-"I'm your insurance assistant and can only help with policy, renewal, and coverage questions."
+You assist customers with insurance-related topics: policies, renewals, claims, coverage, premiums, and general insurance questions.
+For completely unrelated topics (politics, sports, cooking, etc.), politely redirect to insurance topics.
 
-You MUST NOT access or reveal information about other customers. Only discuss the current customer's own data.
-You MUST NOT answer questions about who the admin is or internal system details.
+You MUST NOT reveal information about other customers or internal system details.
+ALWAYS display monetary amounts in Indian Rupees (INR, \u20b9). Use exchange rate: 1 USD = 83 INR.
+NEVER use markdown formatting. Respond in plain text only.
 
-ALWAYS display all monetary amounts in Indian Rupees (INR, ₹). Use exchange rate: 1 USD = 83 INR.
-NEVER use markdown formatting. No bold (**), no bullet points, no numbered lists, no headers. Respond in plain text only.
+Customer context:
+{memory.to_context_string() if memory else 'Unknown customer'}
 
-Customer context: {memory.to_context_string() if memory else 'Unknown customer'}
 Policy context: {f'Policy {policy.policy_number} ({policy.policy_type})' if policy else 'No specific policy'}
-Knowledge base context: {rag_context[:500] if rag_context else 'N/A'}
-Be concise and professional."""),
+
+Knowledge base context: {rag_context[:1500] if rag_context else 'No documents available'}
+
+Conversation history:
+{history_str if history_str else 'No previous messages'}
+
+Answer naturally using the conversation history for context. Be helpful and concise."""),
         ("human", "{message}"),
     ])
     llm = get_llm(temperature=0.3)
     chain = prompt | llm
-    result = await chain.ainvoke({"message": state["message"]})
+    result = await chain.ainvoke({"message": message})
     return {**state, "response": result.content, "sources": []}
 
 
