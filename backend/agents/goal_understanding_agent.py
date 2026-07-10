@@ -25,6 +25,9 @@ Return a JSON object with these exact fields:
 - customer_name: customer name if mentioned, or null
 - summary: one sentence summary of what the customer wants
 
+Use "ask_question" for ANY question about coverage, benefits, claims, maternity, exclusions, deductibles, terms, or policy details.
+Use "general_chat" only for greetings, meta questions, or truly general conversation.
+
 Respond ONLY with valid JSON, no markdown, no explanation."""),
     ("human", "Customer message: {message}\nCustomer name: {customer_name}"),
 ])
