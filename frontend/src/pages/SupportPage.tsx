@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSuggestions, bookMeeting } from '../api/services'
+import { useAuthStore } from '../store/authStore'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
@@ -8,6 +9,11 @@ import type { SlotItem } from '../types'
 
 export function SupportPage() {
   const navigate = useNavigate()
+  const { isAdmin } = useAuthStore()
+
+  useEffect(() => {
+    if (isAdmin) navigate('/admin', { replace: true })
+  }, [isAdmin, navigate])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [slots, setSlots] = useState<SlotItem[]>([])

@@ -12,7 +12,7 @@ import type { Policy, Renewal, Notification } from '../types'
 import { Spinner } from '../components/ui/Spinner'
 
 export function DashboardPage() {
-  const { customer } = useAuthStore()
+  const { customer, isAdmin } = useAuthStore()
   const navigate = useNavigate()
   const [policies, setPolicies] = useState<Policy[]>([])
   const [renewals, setRenewals] = useState<Renewal[]>([])
@@ -131,7 +131,8 @@ export function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* AI Chat CTA */}
+          {/* AI Chat CTA - customers only */}
+          {!isAdmin && (
           <Card className="bg-gradient-to-br from-blue-600 to-purple-600 text-white border-0">
             <div className="flex items-center gap-3 mb-3">
               <MessageSquare className="w-6 h-6" />
@@ -149,6 +150,7 @@ export function DashboardPage() {
               Start Chat
             </Button>
           </Card>
+          )}
         </div>
       </div>
     </div>

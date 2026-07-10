@@ -10,8 +10,8 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/policies', icon: FileText, label: 'My Policies' },
   { to: '/renewals', icon: RefreshCw, label: 'Renewals' },
-  { to: '/chat', icon: MessageSquare, label: 'AI Assistant' },
-  { to: '/support', icon: HeadphonesIcon, label: 'Talk to Human' },
+  { to: '/chat', icon: MessageSquare, label: 'AI Assistant', customerOnly: true },
+  { to: '/support', icon: HeadphonesIcon, label: 'Talk to Human', customerOnly: true },
   { to: '/meetings', icon: Calendar, label: 'My Meetings' },
   { to: '/notifications', icon: Bell, label: 'Notifications' },
   { to: '/profile', icon: User, label: 'Profile' },
@@ -64,7 +64,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {navItems.filter(item => !item.customerOnly || !isAdmin).map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

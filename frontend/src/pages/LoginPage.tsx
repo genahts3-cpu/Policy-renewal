@@ -20,13 +20,11 @@ export function LoginPage() {
     setLoading(true)
     try {
       const token = await login(email, password)
-      localStorage.setItem('access_token', token.access_token)
       const customer = await getMe(token.access_token)
       setAuth(token.access_token, customer, token.is_admin)
       navigate(token.is_admin ? '/admin' : '/dashboard')
     } catch {
-      setError('Invalid email or password')
-    } finally {
+      setError('Invalid email or password. Please check your credentials and try again.')
       setLoading(false)
     }
   }
@@ -48,8 +46,8 @@ return (
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Sign in to your account</h2>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
-              {error}
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg text-sm mb-4 font-medium">
+              ⚠️ {error}
             </div>
           )}
 

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User, Sparkles, PlusCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { sendChat } from '../api/services'
+import { useAuthStore } from '../store/authStore'
 import { Button } from '../components/ui/Button'
 import type { ChatMessage } from '../types'
 
@@ -25,6 +27,8 @@ const getChatKey = (suffix: string) => {
 }
 
 export function ChatPage() {
+  const { isAdmin } = useAuthStore()
+  const navigate = useNavigate()
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const saved = sessionStorage.getItem(getChatKey('messages'))
     return saved ? JSON.parse(saved) : [INITIAL_MESSAGE]
@@ -35,6 +39,10 @@ export function ChatPage() {
     () => sessionStorage.getItem(getChatKey('session_id')) || undefined
   )
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isAdmin) navigate('/admin', { replace: true })
+  }, [isAdmin, navigate])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

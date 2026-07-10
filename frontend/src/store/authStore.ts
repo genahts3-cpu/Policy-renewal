@@ -17,13 +17,14 @@ const clearChatStorage = () => {
 
 export const useAuthStore = create<AuthState>((set) => ({
   token: localStorage.getItem('access_token'),
-  customer: null,
+  customer: (() => { try { const c = localStorage.getItem('customer'); return c ? JSON.parse(c) : null } catch { return null } })(),
   isAdmin: localStorage.getItem('is_admin') === 'true',
   setAuth: (token, customer, isAdmin) => {
     clearChatStorage()
     localStorage.setItem('access_token', token)
     localStorage.setItem('is_admin', String(isAdmin))
     localStorage.setItem('customer_id', String(customer.id))
+    localStorage.setItem('customer', JSON.stringify(customer))
     set({ token, customer, isAdmin })
   },
   logout: () => {
